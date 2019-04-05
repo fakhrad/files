@@ -1,0 +1,130 @@
+version: "3.2"
+services:
+  rabbitmq:
+    image: "library/rabbitmq"
+    container_name: rabbitmq
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    ports:
+    - "4369:4369"
+    - "5671:5671"
+    - "5672:5672"
+    - "25672:25672"
+    - "15671:15671"
+    - "15672:15672"
+    networks: 
+      - rfq
+    tty: true
+  requester:
+    image: "fakhrad/requester:latest"
+    container_name: requester
+    environment:
+      RABBITMQ_HOST: amqp://rabbitmq:5672
+      PORT: 80
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "80"
+    restart: on-failure
+    tty: true
+    depends_on:
+      - rabbitmq
+    
+    networks: 
+      - rfq
+    command: npm run startdev
+  admin-api:
+    image: "fakhrad/admin-api:latest"
+    container_name: admin-api
+    environment:
+      RABBITMQ_HOST: amqp://rabbitmq:5672
+      PORT: 80
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "80"
+    restart: on-failure
+    tty: true
+    depends_on:
+      - rabbitmq
+    
+    networks: 
+      - rfq
+    command: npm run startdev
+  authservice:
+    image: "fakhrad/oauth:latest"
+    container_name: authservice
+    environment:
+      RABBITMQ_HOST: amqp://rabbitmq:5672
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    depends_on:
+       - rabbitmq
+    tty: true
+    command: npm start
+    networks: 
+      - rfq
+  messaging:
+    image: "fakhrad/messaging"
+    container_name: messaging
+    environment:
+      RABBITMQ_HOST: amqp://rabbitmq:5672
+      SMS_PROVIDER: kavenegar
+      KAVENEGAR_LINE: 100065995
+      KAVENEGAR_VERIFYTEMPLATE: mivappverify
+      KAVENEGAR_API: 6B62613648303131747448786E324C7531744E4D2F682B7A2F504F797A4F4450
+      PUSH_PROVIDER: fcm
+      EMAIL_PROVIDER: sendgrid
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    depends_on:
+       - rabbitmq
+    tty: true
+    command: npm start
+    networks: 
+      - rfq
+  products:
+    image: "fakhrad/products"
+    container_name: products
+    environment:
+      RABBITMQ_HOST: amqp://rabbitmq:5672
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    depends_on:
+       - rabbitmq
+    tty: true
+    command: npm start
+    networks: 
+      - rfq 
+  adminpanel:
+    image: "fakhrad/adminpanel:latest"
+    container_name: adminpanel
+    environment:
+      PORT: 80
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    depends_on:
+       - rabbitmq
+    tty: true
+    command: npm start
+    networks: 
+      - rfq 
+networks: 
+  rfq:
+    external: false
+    driver: overlay
+  
