@@ -54,24 +54,6 @@ services:
         condition: on-failure
     networks: 
       - rfq
-  requester:
-    image: "fakhrad/requester:latest"
-    environment:
-      RABBITMQ_HOST: amqp://rabbitmq:5672
-      PORT: 80
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-    ports:
-      - "80"
-    tty: true
-    depends_on:
-      - rabbitmq
-    
-    networks: 
-      - rfq
-    command: npm run startdev
   contentDelivery:
     image: "fakhrad/contentdelivery:latest"
     environment:
@@ -89,38 +71,6 @@ services:
     networks: 
       - rfq
     command: npm run start
-  admin-api:
-    image: "fakhrad/admin-api:latest"
-    environment:
-      RABBITMQ_HOST: amqp://rabbitmq:5672
-      PORT: 80
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-    ports:
-      - "80"
-    tty: true
-    depends_on:
-      - rabbitmq
-    
-    networks: 
-      - rfq
-    command: npm run startdev
-  authservice:
-    image: "fakhrad/oauth:latest"
-    environment:
-      RABBITMQ_HOST: amqp://rabbitmq:5672
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-    depends_on:
-       - rabbitmq
-    tty: true
-    command: npm start
-    networks: 
-      - rfq
   messaging:
     image: "fakhrad/messaging:latest"
     environment:
@@ -141,7 +91,7 @@ services:
     command: npm start
     networks: 
       - rfq
- assets:
+  assets:
     image: "fakhrad/assets:latest"
     environment:
       RABBITMQ_HOST: amqp://rabbitmq:5672
@@ -155,7 +105,7 @@ services:
     command: npm start
     networks:  
       - rfq
- integration:
+  integration:
     image: "fakhrad/integration:latest"
     environment:
       RABBITMQ_HOST: amqp://rabbitmq:5672
