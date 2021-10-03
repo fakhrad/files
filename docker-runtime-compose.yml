@@ -1,4 +1,4 @@
-version: "3.2"
+version: "3.8"
 services:
   rabbitmq:
     image: "library/rabbitmq"
@@ -55,7 +55,7 @@ services:
     networks: 
       - rfq
   contentDelivery:
-    image: "fakhrad/contentdelivery:latest"
+    image: "contentdelivery:latest"
     environment:
       RABBITMQ_HOST: amqp://rabbitmq:5672
       PORT: 80
@@ -72,7 +72,7 @@ services:
       - rfq
     command: npm run start
   messaging:
-    image: "fakhrad/messaging:latest"
+    image: "messaging:latest"
     environment:
       RABBITMQ_HOST: amqp://rabbitmq:5672
       SMS_PROVIDER: kavenegar
@@ -92,7 +92,7 @@ services:
     networks: 
       - rfq
   assets:
-    image: "fakhrad/assets:latest"
+    image: "assets:latest"
     environment:
       RABBITMQ_HOST: amqp://rabbitmq:5672
     deploy:
@@ -106,7 +106,7 @@ services:
     networks:  
       - rfq
   integration:
-    image: "fakhrad/integration:latest"
+    image: "integration:latest"
     environment:
       RABBITMQ_HOST: amqp://rabbitmq:5672
     deploy:

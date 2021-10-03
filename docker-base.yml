@@ -1,0 +1,84 @@
+version: "3.8"
+services:
+  rabbitmq:
+    image: "library/rabbitmq"
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    ports:
+    - 4369
+    - 5671
+    - 5672
+    - 25672
+    - 15671
+    - 15672
+    networks: 
+      - hcms
+    tty: true
+  contentdb:
+    image: "mongo"
+    environment:
+      MONGO_INITDB_DATABASE: contents
+    volumes: 
+      - ./content-volume:/data/db
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    networks: 
+      - hcms
+  assetsdb:
+    image: "mongo"
+    environment:
+      MONGO_INITDB_DATABASE: files
+    volumes: 
+      - ./files-volume:/data/db
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    networks: 
+      - hcms
+  authdb:
+    image: "mongo"
+    environment:
+      MONGO_INITDB_DATABASE: authdb
+    volumes: 
+      - ./auth-volume:/data/db
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    networks: 
+      - hcms
+networks: 
+  hcms:
+    external: false
+    driver: overlay
+hcms:
+    image: hcms
+    environment:
+      REACT_APP_APPS_BASE_URL: http://admin-api:8013
+      REACT_APP_SPACE_BASE_URL: http://admin-api:8013
+      REACT_APP_CONTENTS_BASE_URL: http://admin-api:8013
+      REACT_APP_CATEGORIES_BASE_URL: http://admin-api:8013
+      REACT_APP_CONTENT_TYPE_BASE_URL: http://admin-api:8013
+      REACT_APP_ASSET_BASE_URL: http://admin-api:8012
+      REACT_APP_DOWNLOAD_FILE_BASE_URL: http://admin-api:8012
+      REACT_APP_ACCOUNT_BASE_URL: http://admin-api:8013
+      REACT_APP_BASE_URL: http://admin-api:8013
+      REACT_APP_DATA_DEFAULT_LANG: fa
+    volumes:
+      - './:/app'
+      - '/app/node_modules'
+    ports:
+      - 80:3000
+    stdin_open: true
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    command: npm start
+volumes:
+  content-volume:
+  files-volume:
+  auth-volume:

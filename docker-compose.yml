@@ -1,4 +1,4 @@
-version: "3.2"
+version: "3.8"
 services:
   rabbitmq:
     image: "library/rabbitmq"
@@ -7,75 +7,74 @@ services:
       restart_policy:
         condition: on-failure
     ports:
-    - "4369:4369"
-    - "5671:5671"
-    - "5672:5672"
-    - "25672:25672"
-    - "15671:15671"
-    - "15672:15672"
+    - 4369
+    - 5671
+    - 5672
+    - 25672
+    - 15671
+    - 15672
     networks: 
-      - rfq
+      - hcms
     tty: true
-  content-db:
+  contentdb:
     image: "mongo"
     environment:
-      MONGO_INITDB_DATABASE: content-db
-      MONGO_INITDB_ROOT_USERNAME: fakhrad
-      MONGO_INITDB_ROOT_PASSWORD: logrezaee24359
+      MONGO_INITDB_DATABASE: contents
+    volumes: 
+      - ./content-volume:/data/db
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
-    ports:
-      - "21017-21019:21017-21019"
     networks: 
-      - rfq
-  assets-db:
+      - hcms
+  assetsdb:
     image: "mongo"
     environment:
       MONGO_INITDB_DATABASE: files
-      MONGO_INITDB_ROOT_USERNAME: fakhrad
-      MONGO_INITDB_ROOT_PASSWORD: logrezaee24359
+    volumes: 
+      - ./files-volume:/data/db
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
     networks: 
-      - rfq
-  auth-db:
+      - hcms
+  authdb:
     image: "mongo"
     environment:
       MONGO_INITDB_DATABASE: authdb
-      MONGO_INITDB_ROOT_USERNAME: fakhrad
-      MONGO_INITDB_ROOT_PASSWORD: logrezaee24359
+    volumes: 
+      - ./auth-volume:/data/db
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
     networks: 
-      - rfq
-  requester:
-    image: "fakhrad/requester:latest"
-    environment:
-      RABBITMQ_HOST: amqp://rabbitmq:5672
-      PORT: 80
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-    ports:
-      - "80"
-    tty: true
-    depends_on:
-      - rabbitmq
-    
-    networks: 
-      - rfq
-    command: npm run startdev
+      - hcms
   contentDelivery:
-    image: "fakhrad/contentdelivery:latest"
+    image: "cda:latest"
     environment:
       RABBITMQ_HOST: amqp://rabbitmq:5672
+      CONTENT_DB_URL: mongodb://contentdb:27017/contents
+      PORT: 80
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    ports:
+      - 80
+    tty: true
+    depends_on:
+      - rabbitmq
+    networks: 
+      - hcms
+    command: npm start
+  contentService:
+    image: "content:latest"
+    environment:
+      RABBITMQ_HOST: amqp://rabbitmq:5672
+      CONTENT_DB_URL: mongodb://contentdb:27017/content-db
       PORT: 80
     deploy:
       replicas: 1
@@ -87,90 +86,86 @@ services:
     depends_on:
       - rabbitmq
     networks: 
-      - rfq
-    command: npm run start
-  admin-api:
-    image: "fakhrad/admin-api:latest"
-    environment:
-      RABBITMQ_HOST: amqp://rabbitmq:5672
-      PORT: 80
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-    ports:
-      - "80"
-    tty: true
-    depends_on:
-      - rabbitmq
-    
-    networks: 
-      - rfq
-    command: npm run startdev
+      - hcms
+    command: npm start
   authservice:
-    image: "fakhrad/oauth:latest"
+    image: "oauth:latest"
     environment:
       RABBITMQ_HOST: amqp://rabbitmq:5672
+      DATABASE_URL: mongodb://authdb:27017/authdb
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
     depends_on:
        - rabbitmq
+       - authdb
     tty: true
     command: npm start
     networks: 
-      - rfq
-  messaging:
-    image: "fakhrad/messaging:latest"
+      - hcms
+  assets:
+    image: "assets:latest"
     environment:
       RABBITMQ_HOST: amqp://rabbitmq:5672
-      SMS_PROVIDER: kavenegar
-      KAVENEGAR_LINE: 100065995
-      KAVENEGAR_VERIFYTEMPLATE: mivappverify
-      KAVENEGAR_API: 6B62613648303131747448786E324C7531744E4D2F682B7A2F504F797A4F4450
-      PUSH_PROVIDER: fcm
-      EMAIL_PROVIDER: sendgrid
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-    depends_on:
-       - rabbitmq
-    tty: true
-    command: npm start
-    networks: 
-      - rfq
- assets:
-    image: "fakhrad/assets:latest"
-    environment:
-      RABBITMQ_HOST: amqp://rabbitmq:5672
+      DATABASE_URL: mongodb://contentdb:27017/contents
+      AUTHDB_URL: mongodb://authdb:27017/authdb
+      FILEDB_URL: mongodb://assetsdb:27017/files
+      PORT: 80
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
     depends_on:
         - rabbitmq
+    ports:
+      - "8012:80"
     tty: true
     command: npm start
     networks:  
-      - rfq
- integration:
-    image: "fakhrad/integration:latest"
+      - hcms
+  admin-api:
+    image: "admin-api:latest"
     environment:
       RABBITMQ_HOST: amqp://rabbitmq:5672
+      PORT: 80
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
-    depends_on:
-        - rabbitmq
+    ports:
+      - "8013:80"
     tty: true
+    depends_on:
+      - rabbitmq    
+    networks: 
+      - hcms
     command: npm start
-    networks:  
-      - rfq
+  hcms:
+    image: hcms
+    environment:
+      REACT_APP_APPS_BASE_URL: http://localhost:8013
+      REACT_APP_SPACE_BASE_URL: http://localhost:8013
+      REACT_APP_CONTENTS_BASE_URL: http://localhost:8013
+      REACT_APP_CATEGORIES_BASE_URL: http://localhost:8013
+      REACT_APP_CONTENT_TYPE_BASE_URL: http://localhost:8013
+      REACT_APP_ASSET_BASE_URL: http://localhost:8013
+      REACT_APP_DOWNLOAD_FILE_BASE_URL: http://localhost:8012
+      REACT_APP_ACCOUNT_BASE_URL: http://localhost:8013
+      REACT_APP_BASE_URL: http://localhost:8013
+      REACT_APP_DATA_DEFAULT_LANG: fa
+    volumes:
+      - './:/app'
+      - '/app/node_modules'
+    ports:
+      - 80:3000
+    stdin_open: true
+    command: npm start
 networks: 
-  rfq:
+  hcms:
     external: false
     driver: overlay
-  
+volumes:
+  content-volume:
+  files-volume:
+  auth-volume:
